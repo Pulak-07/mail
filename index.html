@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Redone Mail Hub — Personal Multi-Domain Server</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & Hind Siliguri -->
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            slateDark: '#0F172A',
+            slateCard: '#1E293B',
+            skyAccent: '#38BDF8',
+          },
+          fontFamily: {
+            sans: ['Inter', 'Hind Siliguri', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #0F172A;
+      color: #F8FAFC;
+      font-family: 'Inter', 'Hind Siliguri', sans-serif;
+    }
+    /* Custom Scrollbar for Dark Luxury Theme */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0F172A; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #38BDF8; }
+    
+    /* Smooth Fade Animation */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in { animation: fadeIn 0.25s ease-out forwards; }
+  </style>
+</head>
+<body class="h-screen w-screen overflow-hidden flex flex-col select-none bg-[#0F172A] text-slate-100">
+
+  <!-- ==================== TOAST NOTIFICATION ==================== -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-[100] flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- ==================== SECURE AUTH SCREEN ==================== -->
+  <div id="authScreen" class="fixed inset-0 z-50 bg-[#0F172A] flex items-center justify-center p-4">
+    <div class="w-full max-w-md bg-[#1E293B]/90 border border-slate-700/80 rounded-2xl p-6 sm:p-8 shadow-2xl backdrop-blur-xl animate-fade-in">
+      <div class="flex items-center gap-3.5 mb-6">
+        <div class="w-11 h-11 rounded-xl bg-sky-400/10 border border-sky-400/30 flex items-center justify-center text-sky-400 font-bold text-xl shadow-inner">
+          R
+        </div>
+        <div>
+          <h1 class="text-xl font-bold tracking-tight text-white">Redone Mail Hub</h1>
+          <p class="text-xs text-slate-400">Private Cloudflare D1 + Resend Mail Server</p>
+        </div>
+      </div>
+
+      <form id="loginForm" class="space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1.5">Permanent User ID</label>
+          <input type="text" id="userSelect" placeholder="Enter your User ID" required autocomplete="username"
+            class="w-full bg-[#0F172A] border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-sky-400 transition" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1.5">Account Password</label>
+          <input type="password" id="pinInput" placeholder="Enter your password" required autocomplete="current-password"
+            class="w-full bg-[#0F172A] border border-slate-700 rounded-xl px-4 py-3 text-sm text-white font-mono focus:outline-none focus:border-sky-400 transition" />
+          <div class="flex justify-end items-center mt-1.5 text-[11px] text-slate-400">
+            <span class="text-emerald-400 flex items-center gap-1">● D1 Auth Ready</span>
+          </div>
+        </div>
+
+        <button type="submit"
+          class="w-full bg-sky-400 hover:bg-sky-300 text-slate-950 font-semibold py-3 rounded-xl transition shadow-lg shadow-sky-400/20 cursor-pointer mt-2">
+          Unlock Mail Server
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== TOP NAVBAR ==================== -->
+  <header class="h-16 border-b border-slate-800 bg-[#0F172A]/95 px-3 sm:px-6 flex items-center justify-between shrink-0 gap-2">
+    <div class="flex items-center gap-3 min-w-0">
+      <div class="w-9 h-9 rounded-xl bg-sky-400/10 border border-sky-400/30 flex items-center justify-center text-sky-400 font-bold shrink-0">
+        ✉
+      </div>
+      <div class="truncate">
+        <div class="flex items-center gap-2">
+          <span class="font-bold text-sm sm:text-base tracking-tight text-white truncate">Redone Mail Hub</span>
+          <span class="hidden md:inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> D1 + Resend Webhook
+          </span>
+        </div>
+        <p class="text-[11px] text-slate-400 hidden lg:block truncate">Domains: pulakchakma.dev.cv • pulakchakma.info.mp</p>
+      </div>
+    </div>
+
+    <!-- Right Controls: Identity Switcher + Compose + API Info + Lock -->
+    <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+      <!-- Active Mailbox Switcher -->
+      <div class="flex items-center bg-[#1E293B] border border-slate-700 rounded-xl px-2.5 sm:px-3 py-1.5">
+        <span class="text-xs text-slate-400 mr-2 hidden xl:inline">Sending As:</span>
+        <select id="activeMailbox" onchange="switchMailbox()" class="bg-transparent text-xs sm:text-sm font-medium text-sky-400 focus:outline-none cursor-pointer max-w-[165px] sm:max-w-none truncate">
+          <!-- Populated dynamically based on logged-in user -->
+        </select>
+      </div>
+
+      <button onclick="openComposer()"
+        class="bg-sky-400 hover:bg-sky-300 text-slate-950 text-xs sm:text-sm font-semibold px-3 sm:px-4 py-2 rounded-xl transition flex items-center gap-1.5 shadow-md shadow-sky-400/15 cursor-pointer">
+        <span class="text-base leading-none">+</span> <span class="hidden sm:inline">Compose HTML</span><span class="sm:hidden">New</span>
+      </button>
+
+      <button onclick="toggleApiModal(true)" title="Required API Keys & DNS Setup"
+        class="p-2 rounded-xl bg-[#1E293B] hover:bg-slate-700 text-slate-300 hover:text-sky-400 border border-slate-700 transition cursor-pointer text-xs font-mono">
+        API
+      </button>
+
+      <button onclick="logout()" title="Lock Session"
+        class="p-2 rounded-xl bg-[#1E293B] hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 border border-slate-700 transition cursor-pointer">
+        🔒
+      </button>
+    </div>
+  </header>
+
+  <!-- ==================== MAIN WORKSPACE ==================== -->
+  <div class="flex-1 flex overflow-hidden relative">
+
+    <!-- Left Navigation Sidebar -->
+    <aside class="w-14 sm:w-56 border-r border-slate-800 bg-[#0F172A] p-2 sm:p-3 flex flex-col justify-between shrink-0">
+      <nav class="space-y-1.5">
+        <button onclick="setFolder('inbox')" id="btn-inbox"
+          class="w-full flex items-center justify-center sm:justify-between px-2 sm:px-3 py-2.5 rounded-xl bg-sky-400/10 text-sky-400 border border-sky-400/20 text-sm font-medium transition cursor-pointer">
+          <span class="flex items-center gap-2.5"><span>📥</span> <span class="hidden sm:inline">Inbox</span></span>
+          <span id="inboxCount" class="hidden sm:inline text-xs bg-sky-400 text-slate-950 font-bold px-2 py-0.5 rounded-full">0</span>
+        </button>
+
+        <button onclick="setFolder('sent')" id="btn-sent"
+          class="w-full flex items-center justify-center sm:justify-between px-2 sm:px-3 py-2.5 rounded-xl text-slate-400 hover:bg-[#1E293B] hover:text-white text-sm font-medium transition cursor-pointer">
+          <span class="flex items-center gap-2.5"><span>📤</span> <span class="hidden sm:inline">Sent Mail</span></span>
+          <span id="sentCount" class="hidden sm:inline text-xs bg-slate-800 text-slate-300 font-medium px-2 py-0.5 rounded-full">0</span>
+        </button>
+
+        <button onclick="simulateIncomingWebhook()"
+          class="w-full flex items-center justify-center sm:justify-start gap-2.5 px-2 sm:px-3 py-2.5 rounded-xl text-emerald-400 hover:bg-emerald-500/10 border border-transparent hover:border-emerald-500/20 text-xs sm:text-sm font-medium transition cursor-pointer mt-4"
+          title="Simulate an incoming email arriving via Resend Webhook">
+          <span>⚡</span> <span class="hidden sm:inline">Test Webhook</span>
+        </button>
+      </nav>
+
+      <!-- Storage & Quota Status Card -->
+      <div class="hidden sm:block bg-[#1E293B]/60 border border-slate-800 rounded-xl p-3.5 space-y-2.5">
+        <div class="flex items-center justify-between text-xs">
+          <span class="text-slate-400 font-medium">Cloudflare D1</span>
+          <span class="text-emerald-400 font-semibold">● Online</span>
+        </div>
+        <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+          <div id="quotaBar" class="bg-sky-400 h-full transition-all duration-500" style="width: 8%;"></div>
+        </div>
+        <div class="flex justify-between text-[11px] text-slate-400">
+          <span>Resend Daily</span>
+          <span id="quotaText">8 / 100</span>
+        </div>
+        <div class="pt-1 border-t border-slate-800/80 text-[10px] text-slate-500 truncate">
+          User: <span id="loggedUserLabel" class="text-slate-300 font-medium">pulak</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Message List Column -->
+    <section id="messageListPane" class="w-full md:w-80 lg:w-96 border-r border-slate-800 bg-[#0F172A]/60 flex flex-col shrink-0">
+      <!-- Search & Filter Bar -->
+      <div class="p-3 border-b border-slate-800 flex items-center gap-2">
+        <input type="text" id="searchInput" oninput="renderMessageList()" placeholder="Search emails or subjects..."
+          class="w-full bg-[#1E293B] border border-slate-700/80 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-white placeholder-slate-400 focus:outline-none focus:border-sky-400 transition" />
+      </div>
+
+      <!-- Mail Items Container -->
+      <div id="messageList" class="flex-1 overflow-y-auto divide-y divide-slate-800/70">
+        <!-- Populated by JS -->
+      </div>
+    </section>
+
+    <!-- Email Reading Pane -->
+    <main id="readingPane" class="hidden md:flex flex-1 flex-col bg-[#0B1120] overflow-hidden">
+      <!-- Empty State -->
+      <div id="emptyReader" class="flex-1 flex flex-col items-center justify-center text-center p-8 text-slate-500">
+        <div class="w-16 h-16 rounded-2xl bg-[#1E293B]/60 border border-slate-800 flex items-center justify-center text-2xl mb-4 text-sky-400">
+          📨
+        </div>
+        <h3 class="text-base font-semibold text-slate-300">Select a message to read</h3>
+        <p class="text-xs max-w-xs mt-1 text-slate-500">All inbound and outbound HTML emails are synced with Cloudflare D1 storage.</p>
+      </div>
+
+      <!-- Active Message Viewer -->
+      <div id="activeReader" class="hidden flex-1 flex flex-col overflow-hidden animate-fade-in">
+        <!-- Reader Toolbar -->
+        <div class="p-4 sm:p-6 border-b border-slate-800 bg-[#0F172A]/80 flex flex-col gap-3">
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex items-center gap-2">
+              <button onclick="closeMobileReader()" class="md:hidden p-1.5 rounded-lg bg-[#1E293B] text-slate-300 text-xs">
+                ← Back
+              </button>
+              <h2 id="readSubject" class="text-base sm:text-lg font-bold text-white leading-snug">Subject Line</h2>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <button onclick="replyToCurrent()"
+                class="px-3 py-1.5 rounded-xl bg-sky-400/10 hover:bg-sky-400/20 text-sky-400 border border-sky-400/30 text-xs font-medium transition cursor-pointer">
+                ↩ Reply
+              </button>
+              <button onclick="deleteCurrentMessage()"
+                class="p-1.5 rounded-xl bg-[#1E293B] hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 border border-slate-700 text-xs transition cursor-pointer" title="Delete from D1">
+                🗑
+              </button>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+            <div class="space-y-0.5">
+              <div><span class="text-slate-500">From:</span> <span id="readSender" class="text-slate-200 font-medium">sender@example.com</span></div>
+              <div><span class="text-slate-500">To:</span> <span id="readRecipient" class="text-sky-400 font-mono">contact@pulakchakma.dev.cv</span></div>
+            </div>
+            <div class="text-right">
+              <span id="readDate" class="text-slate-400 block">Nov 17, 2026</span>
+              <span id="readIdTag" class="text-[10px] font-mono text-slate-500">resend_id: re_98a7sd98</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rendered HTML Content Frame -->
+        <div class="flex-1 overflow-y-auto p-4 sm:p-6 bg-[#0B1120]">
+          <div class="max-w-3xl mx-auto bg-white text-slate-900 rounded-2xl shadow-xl overflow-hidden border border-slate-700">
+            <div id="readHtmlBody" class="p-6 sm:p-8 select-text">
+              <!-- HTML Email Content -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ==================== SPLIT-SCREEN HTML TEMPLATE COMPOSER MODAL ==================== -->
+  <div id="composerModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-6">
+    <div class="w-full max-w-6xl h-[92vh] bg-[#0F172A] border border-slate-700 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-fade-in">
+      
+      <!-- Modal Header -->
+      <div class="px-4 sm:px-6 py-3.5 border-b border-slate-800 bg-[#1E293B]/60 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-3">
+          <span class="w-8 h-8 rounded-lg bg-sky-400/15 text-sky-400 flex items-center justify-center font-bold">✦</span>
+          <div>
+            <h3 class="text-sm sm:text-base font-bold text-white">HTML Template Mail Studio</h3>
+            <p class="text-[11px] text-slate-400 hidden sm:block">Send rich HTML emails via Resend API & save to Cloudflare D1</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button onclick="sendComposedEmail()"
+            class="bg-sky-400 hover:bg-sky-300 text-slate-950 font-semibold text-xs sm:text-sm px-4 py-2 rounded-xl transition shadow-lg shadow-sky-400/20 flex items-center gap-1.5 cursor-pointer">
+            <span>🚀</span> <span>Send Email</span>
+          </button>
+          <button onclick="closeComposer()"
+            class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold cursor-pointer">
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <!-- Modal Body: Left Editor + Right Live Preview -->
+      <div class="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        
+        <!-- Left Side: Controls & HTML Code -->
+        <div class="w-full lg:w-1/2 border-b lg:border-b-0 lg:border-r border-slate-800 p-4 sm:p-5 overflow-y-auto space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[11px] font-medium text-slate-400 mb-1">From (Verified Domain)</label>
+              <input type="text" id="compFrom" readonly
+                class="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-sky-400 font-mono focus:outline-none" />
+            </div>
+            <div>
+              <label class="block text-[11px] font-medium text-slate-400 mb-1">To (Recipient Email)</label>
+              <input type="email" id="compTo" placeholder="client@company.com" required
+                class="w-full bg-[#1E293B] border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-400" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[11px] font-medium text-slate-400 mb-1">Email Subject</label>
+              <input type="text" id="compSubject" value="Project Proposal — Redone IT Tech"
+                class="w-full bg-[#1E293B] border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-400" />
+            </div>
+            <div>
+              <label class="block text-[11px] font-medium text-slate-400 mb-1">Select HTML Template</label>
+              <select id="templateSelector" onchange="applyTemplatePreset()"
+                class="w-full bg-[#1E293B] border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-400 cursor-pointer">
+                <option value="agency">1. Redone IT Tech — Client Proposal</option>
+                <option value="personal">2. Personal Luxury Stationery</option>
+                <option value="invoice">3. Payment & Invoice Receipt</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Dynamic Variables Bar -->
+          <div class="bg-[#1E293B]/60 border border-slate-800 rounded-xl p-3 space-y-2.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-semibold text-sky-400 uppercase tracking-wider">Template Variables</span>
+              <span class="text-[10px] text-slate-500">Auto-replaces {{variables}}</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2.5">
+              <div>
+                <label class="block text-[10px] text-slate-400 mb-1">{{client_name}}</label>
+                <input type="text" id="varName" value="Ariful Islam" oninput="updateLivePreview()"
+                  class="w-full bg-[#0F172A] border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-sky-400" />
+              </div>
+              <div>
+                <label class="block text-[10px] text-slate-400 mb-1">{{cta_link}}</label>
+                <input type="text" id="varLink" value="https://pulakchakma.dev.cv" oninput="updateLivePreview()"
+                  class="w-full bg-[#0F172A] border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-sky-400" />
+              </div>
+            </div>
+            <div>
+              <label class="block text-[10px] text-slate-400 mb-1">{{custom_message}}</label>
+              <textarea id="varMessage" rows="2" oninput="updateLivePreview()"
+                class="w-full bg-[#0F172A] border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-sky-400">We have prepared the complete architecture and timeline for your upcoming web platform. Let us know when you are available for a quick call.</textarea>
+            </div>
+          </div>
+
+          <!-- Raw HTML Code Editor -->
+          <div class="flex-1 flex flex-col">
+            <label class="block text-[11px] font-medium text-slate-400 mb-1">Raw HTML Source (Editable)</label>
+            <textarea id="htmlSourceEditor" rows="8" oninput="updateLivePreview()"
+              class="w-full bg-[#090D16] border border-slate-800 rounded-xl p-3 text-xs font-mono text-emerald-400 focus:outline-none focus:border-sky-400 leading-relaxed"></textarea>
+          </div>
+        </div>
+
+        <!-- Right Side: Live Inbox Rendering Preview -->
+        <div class="w-full lg:w-1/2 bg-[#0B1120] p-4 sm:p-5 flex flex-col overflow-hidden">
+          <div class="flex items-center justify-between mb-2.5">
+            <span class="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Live Inbox Preview
+            </span>
+            <span class="text-[11px] text-slate-500">How recipient sees it in Gmail / Apple Mail</span>
+          </div>
+          <div class="flex-1 bg-white rounded-2xl shadow-inner overflow-y-auto border border-slate-700 p-4 sm:p-6 text-slate-900">
+            <div id="livePreviewFrame"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== API KEYS & ARCHITECTURE GUIDE MODAL ==================== -->
+  <div id="apiModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="w-full max-w-2xl bg-[#1E293B] border border-slate-700 rounded-2xl p-6 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto animate-fade-in">
+      <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+        <h3 class="text-base font-bold text-white">Cloudflare D1 SQL & Required API Keys</h3>
+        <button onclick="toggleApiModal(false)" class="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 text-xs cursor-pointer">✕</button>
+      </div>
+      
+      <div class="space-y-3 text-xs text-slate-300">
+        <div class="p-3.5 rounded-xl bg-[#0F172A] border border-slate-800 space-y-2">
+          <div class="flex items-center justify-between">
+            <p class="font-mono text-sky-400 font-semibold">Cloudflare D1 Console SQL (Comment-Free)</p>
+            <button onclick="copyD1Sql()" class="px-2.5 py-1 rounded-lg bg-sky-400/15 hover:bg-sky-400/25 text-sky-400 font-medium text-[11px] transition cursor-pointer">
+              Copy SQL
+            </button>
+          </div>
+          <pre id="d1SqlBox" class="text-[11px] font-mono text-emerald-400 bg-[#090D16] p-3 rounded-lg overflow-x-auto select-all leading-relaxed">CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  username TEXT UNIQUE NOT NULL,
+  display_name TEXT NOT NULL,
+  password TEXT NOT NULL,
+  allowed_emails TEXT NOT NULL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS messages (
+  id TEXT PRIMARY KEY,
+  owner_email TEXT NOT NULL,
+  direction TEXT CHECK (direction IN ('inbound', 'outbound')),
+  sender TEXT NOT NULL,
+  recipient TEXT NOT NULL,
+  subject TEXT,
+  html_body TEXT,
+  text_body TEXT,
+  resend_email_id TEXT,
+  is_read INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_messages_owner ON messages(owner_email, direction, created_at DESC);
+
+INSERT OR REPLACE INTO users (id, username, display_name, password, allowed_emails)
+VALUES 
+(
+  'usr_pulak_01',
+  'pulakchakma',
+  'Pulak Chakma',
+  'Insanechemestry2008@',
+  '["contact@pulakchakma.dev.cv","contact@pulakchakma.info.mp","info@pulakchakma.dev.cv","support@pulakchakma.info.mp","no-reply@pulakchakma.dev.cv","no-reply@pulakchakma.info.mp"]'
+),
+(
+  'usr_admin_02',
+  'admin',
+  'Redone IT Admin',
+  'Pulak07082008?',
+  '["contact@pulakchakma.dev.cv","contact@pulakchakma.info.mp","info@pulakchakma.dev.cv","support@pulakchakma.info.mp","no-reply@pulakchakma.dev.cv","no-reply@pulakchakma.info.mp"]'
+);</pre>
+        </div>
+
+        <div class="p-3 rounded-xl bg-[#0F172A] border border-slate-800">
+          <p class="font-mono text-sky-400 font-semibold">1. RESEND_API_KEY & RESEND_WEBHOOK_SECRET</p>
+          <p class="text-slate-400 mt-1">Verify both domains in Resend, add MX records in Cloudflare DNS for Catch-All Inbound Receiving, and point webhook to <code class="text-emerald-400">/api/webhook/resend</code>.</p>
+        </div>
+        <div class="p-3 rounded-xl bg-[#0F172A] border border-slate-800">
+          <p class="font-mono text-sky-400 font-semibold">2. CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_D1_DATABASE_ID, CLOUDFLARE_API_TOKEN</p>
+          <p class="text-slate-400 mt-1">Used by Next.js API routes to query your Cloudflare D1 SQL database over HTTPS REST API without driver issues.</p>
+        </div>
+        <div class="p-3 rounded-xl bg-[#0F172A] border border-slate-800">
+          <p class="font-mono text-sky-400 font-semibold">3. JWT_SECRET (32+ chars)</p>
+          <p class="text-slate-400 mt-1">Signs HttpOnly Strict cookies for your permanent users stored in D1.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== APPLICATION LOGIC ==================== -->
+  <script>
+    // 1. Permanent Users Configuration (Matches Cloudflare D1 'users' table)
+    const ALL_COMPANY_EMAILS = [
+      'contact@pulakchakma.dev.cv',
+      'contact@pulakchakma.info.mp',
+      'info@pulakchakma.dev.cv',
+      'support@pulakchakma.info.mp',
+      'no-reply@pulakchakma.dev.cv',
+      'no-reply@pulakchakma.info.mp'
+    ];
+
+    const PERMANENT_USERS = {
+      pulakchakma: {
+        name: 'Pulak Chakma',
+        pin: 'Insanechemestry2008@',
+        allowedEmails: ALL_COMPANY_EMAILS
+      },
+      admin: {
+        name: 'Redone IT Admin',
+        pin: 'Pulak07082008?',
+        allowedEmails: ALL_COMPANY_EMAILS
+      }
+    };
+
+    // 2. Pre-built HTML Email Templates
+    const HTML_TEMPLATES = {
+      agency: `<div style="font-family: 'Inter', Arial, sans-serif; max-width: 560px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden;">
+  <div style="background: #0F172A; padding: 24px 28px; color: #ffffff;">
+    <span style="color: #38BDF8; font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;">Redone IT Tech</span>
+    <h1 style="margin: 6px 0 0; font-size: 20px; font-weight: 700;">Project Architecture & Proposal</h1>
+  </div>
+  <div style="padding: 28px; background: #ffffff; color: #1e293b; line-height: 1.6; font-size: 14px;">
+    <p style="margin-top: 0;">Hello <strong>{{client_name}}</strong>,</p>
+    <p>{{custom_message}}</p>
+    <div style="margin: 24px 0;">
+      <a href="{{cta_link}}" style="background: #0F172A; color: #38BDF8; text-decoration: none; padding: 12px 22px; border-radius: 10px; font-weight: 600; font-size: 13px; display: inline-block;">View Project Portal →</a>
+    </div>
+    <p style="margin-bottom: 0; color: #64748b; font-size: 12px;">Best regards,<br><strong style="color: #0F172A;">Pulak Chakma</strong> • Founder, Redone IT Tech</p>
+  </div>
+</div>`,
+      personal: `<div style="font-family: Georgia, serif; max-width: 540px; margin: 0 auto; padding: 32px; background: #f8fafc; border-left: 4px solid #38BDF8; border-radius: 8px; color: #0f172a;">
+  <p style="font-size: 12px; color: #64748b; margin-top: 0; font-family: sans-serif;">DIRECT DISPATCH • PULAKCHAKMA.INFO.MP</p>
+  <h2 style="font-size: 20px; margin-bottom: 16px;">Dear {{client_name}},</h2>
+  <p style="font-size: 15px; line-height: 1.7; color: #334155;">{{custom_message}}</p>
+  <p style="margin-top: 24px; font-size: 14px;">Warm regards,<br><strong>Pulak Chakma</strong><br><a href="{{cta_link}}" style="color: #0284c7; text-decoration: none;">{{cta_link}}</a></p>
+</div>`,
+      invoice: `<div style="font-family: Arial, sans-serif; max-width: 540px; margin: 0 auto; border: 1px solid #cbd5e1; border-radius: 12px; padding: 24px;">
+  <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 16px;">
+    <strong style="color: #0F172A; font-size: 16px;">REDONE IT TECH — RECEIPT</strong>
+    <span style="background: #dcfce7; color: #166534; font-size: 11px; padding: 3px 8px; border-radius: 99px; font-weight: bold;">VERIFIED</span>
+  </div>
+  <p style="font-size: 14px; color: #334155;">Hi <strong>{{client_name}}</strong>,</p>
+  <p style="font-size: 14px; color: #334155; line-height: 1.5;">{{custom_message}}</p>
+  <div style="background: #f1f5f9; padding: 14px; border-radius: 8px; margin: 18px 0; font-size: 13px;">
+    <strong>Portal Reference:</strong> <a href="{{cta_link}}" style="color: #0284c7;">{{cta_link}}</a>
+  </div>
+</div>`
+    };
+
+    // 3. Simulated Cloudflare D1 'messages' Table State
+    let messagesDB = [
+      {
+        id: 'msg-101',
+        owner_email: 'contact@pulakchakma.dev.cv',
+        direction: 'inbound',
+        sender: 'sarah.connor@techcorp.io',
+        recipient: 'contact@pulakchakma.dev.cv',
+        subject: 'Next.js Web Platform Inquiry',
+        html_body: `<div style="font-family: sans-serif; line-height: 1.6;"><h3 style="margin-top:0; color:#0F172A;">Hi Pulak,</h3><p>We reviewed your portfolio at <strong>pulakchakma.dev.cv</strong> and would love to discuss building a custom dashboard with Redone IT Tech.</p><p>Are you available this week?</p><p style="color:#64748b; font-size:13px;">— Sarah Connor, Product Lead</p></div>`,
+        resend_email_id: 're_in_892341a',
+        is_read: false,
+        created_at: '10:42 PM'
+      },
+      {
+        id: 'msg-102',
+        owner_email: 'pulak@pulakchakma.info.mp',
+        direction: 'inbound',
+        sender: 'billing@cloudflare.com',
+        recipient: 'pulak@pulakchakma.info.mp',
+        subject: 'Cloudflare D1 Database Provisioned',
+        html_body: `<div style="font-family: sans-serif; line-height: 1.6;"><h3 style="margin-top:0; color:#0F172A;">Your D1 SQL Database is Ready</h3><p>Your database <code>redone-mail-db</code> is active and ready to accept REST API queries from your Vercel deployment.</p></div>`,
+        resend_email_id: 're_in_771209b',
+        is_read: true,
+        created_at: 'Yesterday'
+      },
+      {
+        id: 'msg-103',
+        owner_email: 'contact@pulakchakma.dev.cv',
+        direction: 'outbound',
+        sender: 'contact@pulakchakma.dev.cv',
+        recipient: 'ariful@clientdomain.com',
+        subject: 'Project Proposal — Redone IT Tech',
+        html_body: HTML_TEMPLATES.agency
+          .replaceAll('{{client_name}}', 'Ariful Islam')
+          .replaceAll('{{cta_link}}', 'https://pulakchakma.dev.cv')
+          .replaceAll('{{custom_message}}', 'We have prepared the complete architecture and timeline for your upcoming web platform.'),
+        resend_email_id: 're_out_551290c',
+        is_read: true,
+        created_at: '2 days ago'
+      }
+    ];
+
+    let currentUserKey = 'pulakchakma';
+    let currentFolder = 'inbox';
+    let selectedMessageId = null;
+    let dailySentCount = 8;
+
+    // Show non-blocking Toast notification
+    function showToast(msg, type = 'success') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      const colors = type === 'success'
+        ? 'bg-slate-900 border-emerald-500/40 text-emerald-400'
+        : 'bg-slate-900 border-rose-500/40 text-rose-400';
+      toast.className = `px-4 py-3 rounded-xl border ${colors} shadow-2xl text-xs font-medium flex items-center gap-2 animate-fade-in`;
+      toast.innerHTML = `<span>${type === 'success' ? '✓' : '⚠'}</span><span>${msg}</span>`;
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 3200);
+    }
+
+    // Handle Permanent User Login
+    document.getElementById('loginForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const userKey = document.getElementById('userSelect').value.trim();
+      const pin = document.getElementById('pinInput').value.trim();
+      const userObj = PERMANENT_USERS[userKey];
+
+      if (!userObj || pin !== userObj.pin) {
+        showToast('Invalid User ID or Password.', 'error');
+        return;
+      }
+
+      currentUserKey = userKey;
+      document.getElementById('loggedUserLabel').textContent = `${userObj.name} (${userKey})`;
+
+      // Populate allowed domain mailboxes for this permanent user
+      const switcher = document.getElementById('activeMailbox');
+      switcher.innerHTML = userObj.allowedEmails
+        .map(email => `<option value="${email}" class="bg-[#0F172A]">${email}</option>`)
+        .join('');
+
+      document.getElementById('authScreen').classList.add('hidden');
+      selectedMessageId = null;
+      resetReader();
+      renderMessageList();
+      showToast(`Authenticated as ${userObj.name}`);
+    });
+
+    function logout() {
+      document.getElementById('authScreen').classList.remove('hidden');
+      showToast('Session locked');
+    }
+
+    function switchMailbox() {
+      selectedMessageId = null;
+      resetReader();
+      renderMessageList();
+      showToast(`Switched active mailbox to ${document.getElementById('activeMailbox').value}`);
+    }
+
+    function setFolder(folder) {
+      currentFolder = folder;
+      selectedMessageId = null;
+      resetReader();
+
+      const inboxBtn = document.getElementById('btn-inbox');
+      const sentBtn = document.getElementById('btn-sent');
+
+      if (folder === 'inbox') {
+        inboxBtn.className = 'w-full flex items-center justify-center sm:justify-between px-2 sm:px-3 py-2.5 rounded-xl bg-sky-400/10 text-sky-400 border border-sky-400/20 text-sm font-medium transition cursor-pointer';
+        sentBtn.className = 'w-full flex items-center justify-center sm:justify-between px-2 sm:px-3 py-2.5 rounded-xl text-slate-400 hover:bg-[#1E293B] hover:text-white text-sm font-medium transition cursor-pointer';
+      } else {
+        sentBtn.className = 'w-full flex items-center justify-center sm:justify-between px-2 sm:px-3 py-2.5 rounded-xl bg-sky-400/10 text-sky-400 border border-sky-400/20 text-sm font-medium transition cursor-pointer';
+        inboxBtn.className = 'w-full flex items-center justify-center sm:justify-between px-2 sm:px-3 py-2.5 rounded-xl text-slate-400 hover:bg-[#1E293B] hover:text-white text-sm font-medium transition cursor-pointer';
+      }
+      renderMessageList();
+    }
+
+    // Render Message List filtered by Active Domain Mailbox & Folder
+    function renderMessageList() {
+      const activeEmail = document.getElementById('activeMailbox').value;
+      const query = document.getElementById('searchInput').value.toLowerCase();
+      const listEl = document.getElementById('messageList');
+
+      // Update counts for active mailbox
+      const inboxItems = messagesDB.filter(m => m.owner_email === activeEmail && m.direction === 'inbound');
+      const sentItems = messagesDB.filter(m => m.owner_email === activeEmail && m.direction === 'outbound');
+      document.getElementById('inboxCount').textContent = inboxItems.filter(m => !m.is_read).length;
+      document.getElementById('sentCount').textContent = sentItems.length;
+
+      const filtered = messagesDB.filter(m => {
+        const matchOwner = m.owner_email === activeEmail;
+        const matchFolder = currentFolder === 'inbox' ? m.direction === 'inbound' : m.direction === 'outbound';
+        const matchQuery = !query ||
+          m.subject.toLowerCase().includes(query) ||
+          m.sender.toLowerCase().includes(query) ||
+          m.recipient.toLowerCase().includes(query);
+        return matchOwner && matchFolder && matchQuery;
+      });
+
+      if (filtered.length === 0) {
+        listEl.innerHTML = `
+          <div class="p-8 text-center text-slate-500 text-xs">
+            <p class="font-medium text-slate-400">No messages in ${currentFolder}</p>
+            <p class="mt-1">Mailbox: <span class="font-mono text-sky-400">${activeEmail}</span></p>
+          </div>`;
+        return;
+      }
+
+      listEl.innerHTML = filtered.map(msg => {
+        const isSelected = msg.id === selectedMessageId;
+        const peer = msg.direction === 'inbound' ? msg.sender : `To: ${msg.recipient}`;
+        return `
+          <div onclick="openMessage('${msg.id}')"
+            class="p-3.5 cursor-pointer transition hover:bg-[#1E293B]/70 ${isSelected ? 'bg-[#1E293B] border-l-2 border-l-sky-400' : ''}">
+            <div class="flex items-center justify-between gap-2 mb-1">
+              <span class="text-xs font-semibold truncate ${!msg.is_read && msg.direction === 'inbound' ? 'text-white' : 'text-slate-300'}">
+                ${!msg.is_read && msg.direction === 'inbound' ? '<span class="inline-block w-2 h-2 rounded-full bg-sky-400 mr-1.5"></span>' : ''}${peer}
+              </span>
+              <span class="text-[10px] text-slate-500 shrink-0">${msg.created_at}</span>
+            </div>
+            <div class="text-xs font-medium text-slate-200 truncate mb-1">${msg.subject}</div>
+            <div class="text-[11px] text-slate-500 truncate font-mono">${msg.resend_email_id}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function openMessage(id) {
+      const msg = messagesDB.find(m => m.id === id);
+      if (!msg) return;
+
+      msg.is_read = true;
+      selectedMessageId = id;
+      renderMessageList();
+
+      document.getElementById('emptyReader').classList.add('hidden');
+      document.getElementById('activeReader').classList.remove('hidden');
+
+      document.getElementById('readSubject').textContent = msg.subject;
+      document.getElementById('readSender').textContent = msg.sender;
+      document.getElementById('readRecipient').textContent = msg.recipient;
+      document.getElementById('readDate').textContent = msg.created_at;
+      document.getElementById('readIdTag').textContent = `D1 + Resend ID: ${msg.resend_email_id}`;
+      document.getElementById('readHtmlBody').innerHTML = msg.html_body;
+
+      // Mobile responsive switch
+      if (window.innerWidth < 768) {
+        document.getElementById('messageListPane').classList.add('hidden');
+        document.getElementById('readingPane').classList.remove('hidden');
+        document.getElementById('readingPane').classList.add('flex');
+      }
+    }
+
+    function closeMobileReader() {
+      document.getElementById('readingPane').classList.add('hidden');
+      document.getElementById('readingPane').classList.remove('flex');
+      document.getElementById('messageListPane').classList.remove('hidden');
+    }
+
+    function resetReader() {
+      document.getElementById('activeReader').classList.add('hidden');
+      document.getElementById('emptyReader').classList.remove('hidden');
+    }
+
+    function deleteCurrentMessage() {
+      if (!selectedMessageId) return;
+      messagesDB = messagesDB.filter(m => m.id !== selectedMessageId);
+      selectedMessageId = null;
+      resetReader();
+      renderMessageList();
+      showToast('Message deleted from Cloudflare D1');
+    }
+
+    function replyToCurrent() {
+      const msg = messagesDB.find(m => m.id === selectedMessageId);
+      if (!msg) return;
+      openComposer();
+      document.getElementById('compTo').value = msg.direction === 'inbound' ? msg.sender : msg.recipient;
+      document.getElementById('compSubject').value = msg.subject.startsWith('Re:') ? msg.subject : `Re: ${msg.subject}`;
+    }
+
+    // Composer & Live HTML Preview Logic
+    function openComposer() {
+      document.getElementById('compFrom').value = document.getElementById('activeMailbox').value;
+      document.getElementById('composerModal').classList.remove('hidden');
+      applyTemplatePreset();
+    }
+
+    function closeComposer() {
+      document.getElementById('composerModal').classList.add('hidden');
+    }
+
+    function applyTemplatePreset() {
+      const key = document.getElementById('templateSelector').value;
+      document.getElementById('htmlSourceEditor').value = HTML_TEMPLATES[key];
+      updateLivePreview();
+    }
+
+    function getCompiledHtml() {
+      let raw = document.getElementById('htmlSourceEditor').value;
+      const clientName = document.getElementById('varName').value || 'Valued Client';
+      const ctaLink = document.getElementById('varLink').value || 'https://pulakchakma.dev.cv';
+      const customMsg = document.getElementById('varMessage').value || '';
+
+      return raw
+        .replaceAll('{{client_name}}', clientName)
+        .replaceAll('{{cta_link}}', ctaLink)
+        .replaceAll('{{custom_message}}', customMsg);
+    }
+
+    function updateLivePreview() {
+      document.getElementById('livePreviewFrame').innerHTML = getCompiledHtml();
+    }
+
+    function sendComposedEmail() {
+      const from = document.getElementById('compFrom').value;
+      const to = document.getElementById('compTo').value.trim();
+      const subject = document.getElementById('compSubject').value.trim() || '(No Subject)';
+
+      if (!to || !to.includes('@')) {
+        showToast('Please enter a valid recipient email address.', 'error');
+        return;
+      }
+
+      const finalHtml = getCompiledHtml();
+      const newMsg = {
+        id: 'msg-' + Date.now(),
+        owner_email: from,
+        direction: 'outbound',
+        sender: from,
+        recipient: to,
+        subject: subject,
+        html_body: finalHtml,
+        resend_email_id: 're_out_' + Math.random().toString(36).substring(2, 9),
+        is_read: true,
+        created_at: 'Just now'
+      };
+
+      messagesDB.unshift(newMsg);
+      dailySentCount++;
+      document.getElementById('quotaText').textContent = `${dailySentCount} / 100`;
+      document.getElementById('quotaBar').style.width = `${Math.min(dailySentCount, 100)}%`;
+
+      closeComposer();
+      setFolder('sent');
+      openMessage(newMsg.id);
+      showToast(`HTML Email dispatched via Resend & logged to D1!`);
+    }
+
+    // Simulate Resend Inbound Webhook (email.received)
+    function simulateIncomingWebhook() {
+      const activeEmail = document.getElementById('activeMailbox').value;
+      const incoming = {
+        id: 'msg-' + Date.now(),
+        owner_email: activeEmail,
+        direction: 'inbound',
+        sender: 'client.demo@gmail.com',
+        recipient: activeEmail,
+        subject: 'New Webhook Test Message (' + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + ')',
+        html_body: `<div style="font-family: sans-serif; line-height: 1.6;"><h3 style="margin-top:0; color:#0F172A;">Inbound Resend Webhook Verified!</h3><p>This message arrived at <strong>${activeEmail}</strong> via Resend Catch-All MX routing and was saved directly into your Cloudflare D1 database.</p></div>`,
+        resend_email_id: 're_in_' + Math.random().toString(36).substring(2, 9),
+        is_read: false,
+        created_at: 'Just now'
+      };
+
+      messagesDB.unshift(incoming);
+      setFolder('inbox');
+      showToast(`Webhook received new email for ${activeEmail}!`);
+    }
+
+    function toggleApiModal(show) {
+      const modal = document.getElementById('apiModal');
+      if (show) modal.classList.remove('hidden');
+      else modal.classList.add('hidden');
+    }
+
+    function copyD1Sql() {
+      const sqlText = document.getElementById('d1SqlBox').textContent;
+      const tempArea = document.createElement('textarea');
+      tempArea.value = sqlText;
+      document.body.appendChild(tempArea);
+      tempArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempArea);
+      showToast('Clean D1 SQL copied to clipboard!');
+    }
+  </script>
+</body>
+</html>
