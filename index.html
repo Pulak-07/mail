@@ -73,8 +73,14 @@
 
         <div>
           <label class="block text-xs font-medium text-slate-300 mb-1.5">Account Password</label>
-          <input type="password" id="pinInput" placeholder="Enter your password" required autocomplete="current-password"
-            class="w-full bg-[#0F172A] border border-slate-700 rounded-xl px-4 py-3 text-sm text-white font-mono focus:outline-none focus:border-sky-400 transition" />
+          <div class="relative">
+            <input type="password" id="pinInput" placeholder="Enter your password" required autocomplete="current-password"
+              class="w-full bg-[#0F172A] border border-slate-700 rounded-xl px-4 py-3 pr-11 text-sm text-white font-mono focus:outline-none focus:border-sky-400 transition" />
+            <button type="button" onclick="togglePasswordVisibility()" title="Show/Hide Password"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-sky-400 text-xs cursor-pointer">
+              👁
+            </button>
+          </div>
           <div class="flex justify-end items-center mt-1.5 text-[11px] text-slate-400">
             <span class="text-emerald-400 flex items-center gap-1">● D1 Auth Ready</span>
           </div>
@@ -556,14 +562,24 @@ VALUES
     }
 
     // Handle Permanent User Login
+    function togglePasswordVisibility() {
+      const input = document.getElementById('pinInput');
+      input.type = input.type === 'password' ? 'text' : 'password';
+    }
+
     document.getElementById('loginForm').addEventListener('submit', (e) => {
       e.preventDefault();
-      const userKey = document.getElementById('userSelect').value.trim();
+      const userKey = document.getElementById('userSelect').value.trim().toLowerCase();
       const pin = document.getElementById('pinInput').value.trim();
       const userObj = PERMANENT_USERS[userKey];
 
-      if (!userObj || pin !== userObj.pin) {
-        showToast('Invalid User ID or Password.', 'error');
+      if (!userObj) {
+        showToast('Invalid User ID. Use "pulakchakma" or "admin".', 'error');
+        return;
+      }
+
+      if (pin !== userObj.pin) {
+        showToast('Incorrect password for ' + userKey + '.', 'error');
         return;
       }
 
